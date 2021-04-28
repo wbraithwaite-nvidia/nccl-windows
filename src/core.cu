@@ -156,13 +156,13 @@ static void orderRanks(RankEntry* ranks, int count) {
 
 
 typedef struct {
-  union {
-    struct {
+  union Blah {
+    struct Blah2 {
       volatile std::atomic<int> bar;
       int globalMemSpaceBroke;
-    };
+    } data;
     char pad[16];
-   };
+   } data;
    RankEntry ranks[1];
 } RankGather;
 
@@ -180,7 +180,7 @@ static ncclResult_t initGather(RankGather** gather, ncclUniqueId commId,
 
   tmp->ranks[rank] = myInfo;
 
-  bar_tmp = tmp->bar.load() - 1;
+  bar_tmp = tmp->data.data.bar.load() - 1;
   bool swapped;
   do {
     bar_tmp += 1;
@@ -194,10 +194,10 @@ static ncclResult_t initGather(RankGather** gather, ncclUniqueId commId,
 
       orderRanks(tmp->ranks, ndev);
     }
-    swapped = tmp->bar.compare_exchange_weak(bar_tmp, bar_tmp + 1);
+    swapped = tmp->data.data.bar.compare_exchange_weak(bar_tmp, bar_tmp + 1);
   } while(!swapped);
 
-  while (tmp->bar.load() < ndev)
+  while (tmp->data.data.bar.load() < ndev)
     std::this_thread::yield();
   __sync_synchronize();
 
@@ -206,30 +206,30 @@ static ncclResult_t initGather(RankGather** gather, ncclUniqueId commId,
 }
 
 static void syncRingDirect(RankGather* gather, int* globalMemSpaceOk) {
-  int bar_tmp = gather->bar.load() - 1;
+  int bar_tmp = gather->data.data.bar.load() - 1;
   int ndev = gather->ranks[0].ndev;
   bool swapped;
   do {
     bar_tmp += 1;
-    swapped = gather->bar.compare_exchange_weak(bar_tmp, bar_tmp+1);
+    swapped = gather->data.data.bar.compare_exchange_weak(bar_tmp, bar_tmp+1);
   } while(!swapped);
 
-  while (gather->bar < 2*ndev) // Wait for all ranks to arrive at this second barrier
+  while (gather->data.data.bar < 2*ndev) // Wait for all ranks to arrive at this second barrier
       std::this_thread::yield();
   __sync_synchronize();
 
-  *globalMemSpaceOk = gather->globalMemSpaceBroke ? 0 : 1;
+  *globalMemSpaceOk = gather->data.data.globalMemSpaceBroke ? 0 : 1;
 }
 
 static ncclResult_t closeGather(RankGather* gather, int ndev) {
-  int bar_tmp = gather->bar.load() - 1;
+  int bar_tmp = gather->data.data.bar.load() - 1;
   bool swapped;
   do {
     bar_tmp += 1;
-    swapped = gather->bar.compare_exchange_weak(bar_tmp, bar_tmp + 1);
+    swapped = gather->data.data.bar.compare_exchange_weak(bar_tmp, bar_tmp + 1);
   } while(!swapped);
 
-  while (gather->bar < 3*ndev) // Wait for all ranks to arrive at this third barrier
+  while (gather->data.data.bar < 3*ndev) // Wait for all ranks to arrive at this third barrier
       std::this_thread::yield();
   __sync_synchronize();
 
@@ -831,7 +831,7 @@ ncclResult_t ncclCommInitRank(ncclComm_t* newcomm, int ndev, ncclUniqueId commId
     goto cleanup;
   }
 
-  res = commBuildMaps(*newcomm, &commId, myrank, gath->ranks, &gath->globalMemSpaceBroke);
+  res = commBuildMaps(*newcomm, &commId, myrank, gath->ranks, &gath->data.data.globalMemSpaceBroke);
   if (res != ncclSuccess) {
     WARN("rank %d failed to build comm maps", myrank);
     goto cleanup;

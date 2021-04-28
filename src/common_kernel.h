@@ -32,6 +32,12 @@
 
 __device__ unsigned int spinct;
 
+template<typename T> 
+inline __device__ T vFetch(const volatile T* ptr);
+
+template<typename T> 
+inline __device__ void vStore(volatile T* ptr, const T val);
+
 // Spin wait until func evaluates to true
 template<typename FUNC>
 __device__ inline void Wait(const FUNC& func) {
@@ -103,9 +109,9 @@ struct MULTI<FUNC, half> {
       "PackType must be twice the size of float.");
   union converter {
     PackType storage;
-    struct {
+    struct Raw {
       half2 a, b;
-    };
+    } h;
   };
 
   __device__ PackType operator()(const PackType x, const PackType y) const {
@@ -113,8 +119,8 @@ struct MULTI<FUNC, half> {
     cx.storage = x;
     cy.storage = y;
 
-    cr.a = FUNC()(cx.a, cy.a);
-    cr.b = FUNC()(cx.b, cy.b);
+    cr.h.a = FUNC()(cx.h.a, cy.h.a);
+    cr.h.b = FUNC()(cx.h.b, cy.h.b);
 
     return cr.storage;
   }
