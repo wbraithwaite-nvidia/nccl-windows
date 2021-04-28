@@ -9,3 +9,4 @@ x64/
 *.suo
 windows/test/test/
 *.VC.db
+windows/.vs

@@ -25,7 +25,7 @@ struct FuncPassA<half> {
   }
   __device__ half operator()(const half x, const half y) const {
     half r;
-    r.x = x.x;
+    r = x;
     return r;
   }
 };

@@ -234,7 +234,7 @@ T vFetch(const volatile T* ptr) {
 template<> inline __device__
 half vFetch<half>(const volatile half* ptr) {
   half r;
-  r.x = ptr->x;
+  r = *ptr;
   return r;
 }
 #endif
@@ -247,7 +247,7 @@ void vStore(volatile T* ptr, const T val) {
 #ifdef CUDA_HAS_HALF
 template<> inline __device__
 void vStore<half>(volatile half* ptr, const half val) {
-  ptr->x = val.x;
+  *ptr = val;
 }
 #endif
 

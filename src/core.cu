@@ -325,7 +325,7 @@ static ncclResult_t populateRankInfo(RankEntry* info, int rank, ncclComm_t comm)
   info->buffSize = comm->buffSize;
   info->hostptr = comm->hostMem;
   info->devptr = comm->devMem;
-#ifdef _WIN32
+#if defined(_WIN32) && 1
   INFO("skipping IPC handle for Windows");
 #else
   if (cudaIpcGetMemHandle(&info->devipc, (void*)comm->devMem) != cudaSuccess) {
