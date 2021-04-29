@@ -10,3 +10,5 @@ x64/
 windows/test/test/
 *.VC.db
 windows/.vs
+/__build
+/__release

@@ -12,6 +12,16 @@
 #include <cerrno>
 #include <string>
 
+#if (NCCL_TESTS_USE_NVTX)
+#include <nvToolsExt.h>
+
+#define nvtxRangePushA(x) nvtxRangePushA(x)
+#define nvtxRangePop() nvtxRangePop()
+#else
+#define nvtxRangePushA(x)
+#define nvtxRangePop()
+#endif
+
 #define CUDACHECK(cmd) do {                         \
   cudaError_t e = cmd;                              \
   if( e != cudaSuccess ) {                          \
