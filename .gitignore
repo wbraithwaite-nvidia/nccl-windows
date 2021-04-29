@@ -12,3 +12,4 @@ windows/test/test/
 windows/.vs
 /__build
 /__release
+/.vscode
