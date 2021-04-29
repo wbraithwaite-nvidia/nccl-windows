@@ -5,23 +5,23 @@ project(
   VERSION 1.0
   LANGUAGES C CXX)
 
+option(NCCL_BUILD_SHARED "Build as shared library" ON)
+
 enable_language(CUDA)
 
-
-  if(${CMAKE_MINOR_VERSION} LESS_EQUAL 17)
-    find_package(CUDA REQUIRED)
-    set(OPENVXL_CUDA_LIBRARIES "${CUDA_LIBRARIES}")
-    set(OPENVXL_CURAND_LINK_LIBRARY ${CUDA_curand_LIBRARY})
-    set(OPENVXL_CUDA_INCLUDE_DIRECTORIES ${CUDA_INCLUDE_DIRS})
-    set(OPENVXL_CUDA_VERSION_MAJOR ${CUDA_VERSION_MAJOR})
-  else()
-    find_package(CUDAToolkit REQUIRED)
-    set(OPENVXL_CUDA_VERSION_MAJOR ${CUDAToolkit_VERSION_MAJOR})
-    set(OPENVXL_CUDA_LIBRARIES "CUDA::cudart_static")
-    set(OPENVXL_CUDA_INCLUDE_DIRECTORIES ${CUDAToolkit_INCLUDE_DIRS})
-    set(OPENVXL_CURAND_LINK_LIBRARY "CUDA::curand")
-    # set(OPENVXL_CU_LINK_LIBRARY ${CUDA_CUDA_LIBRARY})
-  endif()
+if(${CMAKE_MINOR_VERSION} LESS_EQUAL 17)
+  find_package(CUDA REQUIRED)
+  set(NCCL_CUDA_LIBRARIES "${CUDA_LIBRARIES}")
+  set(NCCL_CURAND_LINK_LIBRARY ${CUDA_curand_LIBRARY})
+  set(NCCL_CUDA_INCLUDE_DIRECTORIES ${CUDA_INCLUDE_DIRS})
+  set(NCCL_CUDA_VERSION_MAJOR ${CUDA_VERSION_MAJOR})
+else()
+  find_package(CUDAToolkit REQUIRED)
+  set(NCCL_CUDA_VERSION_MAJOR ${CUDAToolkit_VERSION_MAJOR})
+  set(NCCL_CUDA_LIBRARIES "CUDA::cudart_static")
+  set(NCCL_CUDA_INCLUDE_DIRECTORIES ${CUDAToolkit_INCLUDE_DIRS})
+  set(NCCL_CURAND_LINK_LIBRARY "CUDA::curand")
+endif()
 
 if(POLICY CMP0074)
   cmake_policy(SET CMP0074 NEW)
@@ -36,10 +36,19 @@ endif()
 file(GLOB NCCL_INCLUDE_FILES src/*.h)
 file(GLOB NCCL_SOURCE_FILES src/*.cu)
 
-add_library(Nccl ${NCCL_SOURCE_FILES} ${NCCL_INCLUDE_FILES})
+if(NCCL_BUILD_SHARED)
+  add_library(Nccl SHARED ${NCCL_SOURCE_FILES} ${NCCL_INCLUDE_FILES})
+else()
+  add_library(Nccl STATIC ${NCCL_SOURCE_FILES} ${NCCL_INCLUDE_FILES})
+endif()
+
 add_library(Nccl::Nccl ALIAS Nccl)
 
 target_compile_definitions(Nccl PRIVATE COMPILING_NCCL)
+
+if(NOT NCCL_BUILD_SHARED)
+  target_compile_definitions(Nccl PUBLIC NCCL_STATIC_LIB)
+endif()
 
 target_include_directories(
   Nccl
@@ -47,14 +56,29 @@ target_include_directories(
          $<BUILD_INTERFACE:${Nccl_SOURCE_DIR}/src> $<INSTALL_INTERFACE:include>)
 
 add_executable(all_gather_test test/single/all_gather_test.cu)
-target_include_directories(all_gather_test PRIVATE test/include) 
-target_link_libraries(all_gather_test PRIVATE Nccl ${OPENVXL_CURAND_LINK_LIBRARY})
+target_include_directories(all_gather_test PRIVATE test/include)
+target_link_libraries(all_gather_test PRIVATE Nccl ${NCCL_CURAND_LINK_LIBRARY})
 list(APPEND NCCL_TESTS all_gather_test)
 
 add_executable(all_reduce_test test/single/all_reduce_test.cu)
-target_include_directories(all_reduce_test PRIVATE test/include) 
-target_link_libraries(all_reduce_test PRIVATE Nccl ${OPENVXL_CURAND_LINK_LIBRARY})
+target_include_directories(all_reduce_test PRIVATE test/include)
+target_link_libraries(all_reduce_test PRIVATE Nccl ${NCCL_CURAND_LINK_LIBRARY})
 list(APPEND NCCL_TESTS all_reduce_test)
+
+add_executable(broadcast_test test/single/broadcast_test.cu)
+target_include_directories(broadcast_test PRIVATE test/include)
+target_link_libraries(broadcast_test PRIVATE Nccl ${NCCL_CURAND_LINK_LIBRARY})
+list(APPEND NCCL_TESTS broadcast_test)
+
+add_executable(reduce_test test/single/reduce_test.cu)
+target_include_directories(reduce_test PRIVATE test/include)
+target_link_libraries(reduce_test PRIVATE Nccl ${NCCL_CURAND_LINK_LIBRARY})
+list(APPEND NCCL_TESTS reduce_test)
+
+add_executable(reduce_scatter_test test/single/reduce_scatter_test.cu)
+target_include_directories(reduce_scatter_test PRIVATE test/include)
+target_link_libraries(reduce_scatter_test PRIVATE Nccl ${NCCL_CURAND_LINK_LIBRARY})
+list(APPEND NCCL_TESTS reduce_scatter_test)
 
 configure_file(${Nccl_SOURCE_DIR}/NcclConfig.cmake.in
                ${Nccl_BINARY_DIR}/NcclConfig.cmake @ONLY)
@@ -84,14 +108,6 @@ install(
 install(FILES ${Nccl_BINARY_DIR}/NcclConfig.cmake
               ${Nccl_BINARY_DIR}/NcclConfigVersion.cmake
         DESTINATION lib/cmake/Nccl)
-
-# Tests #######################################################################
-#
-enable_testing()
-
-add_test(NAME all_gather_test
-         COMMAND all_gather_test
-                 ${Nccl_SOURCE_DIR}/test/single/all_gather_test.cu)
 
 # Status Message for Build Options ############################################
 #

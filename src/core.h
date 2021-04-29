@@ -23,93 +23,93 @@
 
 
 struct ncclMem {
-  union { // Pad this block so that devBuff is correctly aligned
-    struct {
-      int   flags[2];
-      void* recvPtrs;
-      int   opCounter; // Used to determine when remote Communicators are ready.
-                       // Only used in host memory.
-    };
-    char pad[NCCL_MEM_PAD_ALIGN];
-  };
-  // devBuff will be bigger ; we only use its offset/address.
-  char buff[1];
+	union { // Pad this block so that devBuff is correctly aligned
+		struct {
+			int   flags[2];
+			void* recvPtrs;
+			int   opCounter; // Used to determine when remote Communicators are ready.
+							 // Only used in host memory.
+		};
+		char pad[NCCL_MEM_PAD_ALIGN];
+	};
+	// devBuff will be bigger ; we only use its offset/address.
+	char buff[1];
 };
 
 template <typename T>
 struct alignas(long long) DevRing {
-  volatile int* __restrict__ prevOpCounter;
-  volatile int* __restrict__ nextOpCounter;
-  volatile int* __restrict__ sendFlagToNext;
-  volatile int* __restrict__ sendFlagToPrev;
-  volatile int* __restrict__ recvFlagFromNext;
-  volatile int* __restrict__ recvFlagFromPrev;
+	volatile int* __restrict__ prevOpCounter;
+	volatile int* __restrict__ nextOpCounter;
+	volatile int* __restrict__ sendFlagToNext;
+	volatile int* __restrict__ sendFlagToPrev;
+	volatile int* __restrict__ recvFlagFromNext;
+	volatile int* __restrict__ recvFlagFromPrev;
 
-  T* volatile * __restrict__ recvPtrFromNext;
-  T* volatile * __restrict__ sendPtrToPrev;
-  T*   __restrict__ recvBuffer;
-  T*   __restrict__ sendBuffer;
+	T* volatile* __restrict__ recvPtrFromNext;
+	T* volatile* __restrict__ sendPtrToPrev;
+	T* __restrict__ recvBuffer;
+	T* __restrict__ sendBuffer;
 
-  int userRank[MAXRANKS];
+	int userRank[MAXRANKS];
 };
 
 struct NodeRef {
-  ncclMem* remote; // TODO: Verify if these
-  ncclMem* local;  //       are still needed.
-  enum {DEVICE, HOST} type;
-  ncclMem* devCleanup;  // Used only when remote comm uses same process & GPU
-  ncclMem* hostCleanup; // Used whenever target is in different process
-  int* opCounter; // TODO: see if this can be removed too.
+	ncclMem* remote; // TODO: Verify if these
+	ncclMem* local;  //       are still needed.
+	enum { DEVICE, HOST } type;
+	ncclMem* devCleanup;  // Used only when remote comm uses same process & GPU
+	ncclMem* hostCleanup; // Used whenever target is in different process
+	int* opCounter; // TODO: see if this can be removed too.
 };
 
 
 struct ncclComm {
-  int rank;    // my rank in the communicator
-  int nRanks;  // number of GPUs in communicator
-  int cudaDev; // my cuda device index
+	int rank;    // my rank in the communicator
+	int nRanks;  // number of GPUs in communicator
+	int cudaDev; // my cuda device index
 
-  // Device and Host allocated chunks. Stored here to correctly free() memory.
-  ncclMem* devMem;
-  ncclMem* hostMem;
-  int hostMemState;
-  int opSched; // Scheduling operation index
-  int* opCounter; // Counter of completed operations
+	// Device and Host allocated chunks. Stored here to correctly free() memory.
+	ncclMem* devMem;
+	ncclMem* hostMem;
+	int hostMemState;
+	int opSched; // Scheduling operation index
+	int* opCounter; // Counter of completed operations
 
-  cudaStream_t prevStream; // cache last used stream
-  cudaEvent_t doneEvent; // orders operations in different streams
+	cudaStream_t prevStream; // cache last used stream
+	cudaEvent_t doneEvent; // orders operations in different streams
 
-  // Maps an internal nccl index to user-specified rank order. This is necessary
-  // since we need to know how the user expects data to be ordered across
-  // devices. Ordered from current device.
-  int* userFromRing;
+	// Maps an internal nccl index to user-specified rank order. This is necessary
+	// since we need to know how the user expects data to be ordered across
+	// devices. Ordered from current device.
+	int* userFromRing;
 
-  // copy of the above stored on each device
-  int* devUserFromRing;
+	// copy of the above stored on each device
+	int* devUserFromRing;
 
-  // Ring order
-  int* ncclFromRing; // TODO: REMOVE IF NOT NEEDED BEYOND CORE.CU
+	// Ring order
+	int* ncclFromRing; // TODO: REMOVE IF NOT NEEDED BEYOND CORE.CU
 
-  // Size of temp buffer in bytes.
-  size_t buffSize;
+	// Size of temp buffer in bytes.
+	size_t buffSize;
 
-  // Whether we have remote access to the recvbuff pointers passed from remote
-  // GPUs. In single process mode this can be used as long as QPI links are
-  // not present. In multi-process, we never push to a remote recvbuff.
-  int globalMemSpace;
+	// Whether we have remote access to the recvbuff pointers passed from remote
+	// GPUs. In single process mode this can be used as long as QPI links are
+	// not present. In multi-process, we never push to a remote recvbuff.
+	int globalMemSpace;
 
-  // Device copy of the communicator
-  struct ncclComm *devComm;  // TODO: Remove this if not useful
+	// Device copy of the communicator
+	struct ncclComm* devComm;  // TODO: Remove this if not useful
 
-  // Device-side ring view
-  DevRing<char>* devRing;
+	// Device-side ring view
+	DevRing<char>* devRing;
 
-  // Device-to-device communication structures to access remote or local device
-  // memory. Actual allocation larger than 1.
-  NodeRef ptrs[1];
+	// Device-to-device communication structures to access remote or local device
+	// memory. Actual allocation larger than 1.
+	NodeRef ptrs[1];
 };
 
 
-typedef enum {NONE=0, VERSION=1, WARN=2, INFO=3, ABORT=4} DebugLevel;
+typedef enum { NONE = 0, VERSION = 1, WARN = 2, INFO = 3, ABORT = 4 } DebugLevel;
 extern DebugLevel ncclDebugLevel;
 
 #define WARN(...) do {                                           \
@@ -151,10 +151,10 @@ extern DebugLevel ncclDebugLevel;
 
 #ifdef PROFAPI
 #define NCCL_API(ret, func, ...)            \
-    _declspec(dllexport)                    \
+    NCCL_EXPORTED                   \
     ret p##func (__VA_ARGS__);              \
     extern "C"                              \
-    _declspec(dllexport)                    \
+    NCCL_EXPORTED                    \
     ret func(__VA_ARGS__);                  \
     ret p##func(__VA_ARGS__) {              \
         return func(__VA_ARGS__);           \
@@ -163,7 +163,7 @@ extern DebugLevel ncclDebugLevel;
 #else
 #define NCCL_API(ret, func, ...)            \
     extern "C"                              \
-    _declspec(dllexport)                    \
+    NCCL_EXPORTED                    \
     ret func(__VA_ARGS__)
 #endif // end PROFAPI
 

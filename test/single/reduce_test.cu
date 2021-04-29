@@ -13,7 +13,6 @@
 
 #include "nccl.h"
 #include "test_utilities.h"
-#include <nvToolsExt.h>
 
 int csv = false;
 int errors = 0;

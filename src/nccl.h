@@ -17,11 +17,15 @@
 #endif
 
 #ifdef _WIN32
+#ifndef NCCL_STATIC_LIB
     #ifdef COMPILING_NCCL
         #define NCCL_EXPORTED _declspec(dllexport)
     #else
         #define NCCL_EXPORTED _declspec(dllimport)
     #endif
+#else
+#define NCCL_EXPORTED
+#endif
 #else
     #define NCCL_EXPORTED
 #endif
