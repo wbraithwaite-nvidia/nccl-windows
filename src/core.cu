@@ -767,7 +767,7 @@ static ncclResult_t commUnlinkHostMem(ncclComm_t comm, ncclUniqueId commId, int 
 static void showVersion() {
   static int shown = 0;
   if (shown == 0 && ncclDebugLevel >= VERSION) {
-#ifndef _MSC_VER
+#if 0
     printf("NCCL version %d.%d.%d compiled with CUDA %d.%d\n", NCCL_MAJOR, NCCL_MINOR, NCCL_PATCH, CUDA_MAJOR, CUDA_MINOR);
 #endif
     fflush(stdout);
