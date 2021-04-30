@@ -9,6 +9,9 @@
 
 #include <cuda_runtime.h>
 
+#define NCCL_VERSION_CODE 100
+#define NCCL_VERSION(a,b,c) (a ## b ## c)
+
 #if CUDART_VERSION >= 7050
 #include <cuda_fp16.h>
 #define CUDA_HAS_HALF 1
@@ -83,8 +86,8 @@ NCCL_EXPORTED ncclResult_t  ncclCommInitAll(ncclComm_t* comm, int ndev, const in
 ncclResult_t pncclCommInitAll(ncclComm_t* comm, int ndev, const int* devlist);
 
 /* Frees resources associated with communicator object. */
-NCCL_EXPORTED void  ncclCommDestroy(ncclComm_t comm);
-void pncclCommDestroy(ncclComm_t comm);
+NCCL_EXPORTED ncclResult_t  ncclCommDestroy(ncclComm_t comm);
+ncclResult_t pncclCommDestroy(ncclComm_t comm);
 
 /* Returns nice error message. */
 NCCL_EXPORTED const char*  ncclGetErrorString(ncclResult_t result);

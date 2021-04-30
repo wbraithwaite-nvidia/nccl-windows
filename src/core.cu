@@ -1005,23 +1005,25 @@ ncclResult_t ncclCommInitAll(ncclComm_t* comms, int ndev, const int* devlist) {
   return res;
 }
 
-NCCL_API(void, ncclCommDestroy, ncclComm_t comm);
-void ncclCommDestroy(ncclComm_t comm) {
+NCCL_API(ncclResult_t, ncclCommDestroy, ncclComm_t comm);
+ncclResult_t ncclCommDestroy(ncclComm_t comm) {
   if (comm == NULL)
-    return;
+    return ncclInvalidArgument;
 
   int savedDevice;
   cudaGetDevice(&savedDevice);
   int commDevice = comm->cudaDev;
 
   if (savedDevice != commDevice) {
-    CUDACHECK(cudaSetDevice(commDevice), void());
+    CUDACHECK(cudaSetDevice(commDevice), ncclUnhandledCudaError);
   }
 
   commFree(comm);
 
   if (savedDevice != commDevice)
-    cudaSetDevice(savedDevice);
+    CUDACHECK(cudaSetDevice(savedDevice), ncclUnhandledCudaError);
+
+    return ncclSuccess;
 }
 
 NCCL_API(const char*, ncclGetErrorString, ncclResult_t code);
