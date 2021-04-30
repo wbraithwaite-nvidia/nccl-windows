@@ -24,7 +24,18 @@ NCCL requires at least CUDA 7.0 and Kepler or newer GPUs. Best performance is ac
 
 Note: NCCL may also work with CUDA 6.5, but this is an untested configuration.
 
-## Build & run
+## Cmake Build
+
+### Windows
+```shell
+$ cmake -DCMAKE_CUDA_ARCHITECTURES=52 -DNCCL_BUILD_SHARED=OFF
+```
+
+### Linux
+```shell
+$ cmake -DCMAKE_CUDA_ARCHITECTURES=52 -DNCCL_BUILD_SHARED=OFF -DNccl_DIR="/ur/local/nccl-windows/lib/cmake/Nccl"
+```
+## Build
 
 To build the library and tests.
 
@@ -32,6 +43,8 @@ To build the library and tests.
 $ cd nccl
 $ make CUDA_HOME=<cuda install path> test
 ```
+
+## Run
 
 Test binaries are located in the subdirectories nccl/build/test/{single,mpi}.
 
